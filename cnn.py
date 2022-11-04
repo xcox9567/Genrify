@@ -1,9 +1,10 @@
 # Alexander Cox
 # Ernst-Richard Kausche
 # Ava Sato
-
-from random import random
-from pandas import pd
+import sys
+import random
+import pandas as pd
+from PIL import Image
 import numpy as np
 
 
@@ -13,33 +14,13 @@ class Neuron:
         self.w = w
         self.activation = activation
 
+
 class CNN:
-    def __init__(self, path, n_hidden, eta, p_train, seed, thresh):
-        print(f"Initializing model from {path} with seed {seed}: {n_hidden}n, {eta}r, {thresh}t, {p_train}p...")
+    def __init__(self, n_hidden, eta):
+        print(f"Initializing model: {n_hidden}n, {eta}r...")
         # Assign arguments to attributes
-        self.path = path
         self.n_hidden = int(n_hidden)
         self.eta = float(eta)
-        self.p_train = float(p_train)
-        self.seed = seed
-        self.thresh = float(thresh)
-        # Set random seed
-        random.seed(self.seed)
-        # Pre-process data and temporarily store in train_set as numpy array to be moved into test_set and val_set
-        self.train_set = pp_data(pd.read_csv(path)).to_numpy()
-        self.n_inst = self.train_set.shape[0]
-        self.val_set = np.empty([0, self.train_set.shape[1]])
-        self.test_set = np.empty([0, self.train_set.shape[1]])
-        # Generate test set randomly from half of non-training data
-        for i in range(int(((1 - self.p_train) / 2) * self.n_inst)):
-            rand = random.randint(0, self.train_set.shape[0] - 1)
-            self.test_set = np.vstack((self.test_set, self.train_set[rand]))
-            self.train_set = np.delete(self.train_set, rand, axis=0)
-        # Generate validation set randomly from other half of non-training data
-        for i in range(int(((1 - self.p_train) / 2) * self.n_inst)):
-            rand = random.randint(0, self.train_set.shape[0] - 1)
-            self.val_set = np.vstack((self.val_set, self.train_set[rand]))
-            self.train_set = np.delete(self.train_set, rand, axis=0)
         # Randomly assign hidden neuron weights to reals in [-0.1, 0.1) and set feedback and activation to 0
         self.hidden_neurons = []
         for i in range(self.n_hidden):
@@ -155,5 +136,43 @@ class CNN:
         return correct / test_set.shape[0]
 
 
-if '__name__' == '__main__':
+def process_data():
+    # Set random seed
+    random.seed(seed)
+    # Create a set of numpy arrays for each image file in the data set
+    GENRES = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
+    train_set = []
+    for genre in GENRES:
+        for i in range(100):
+            if i < 10:
+                song_arr = np.array(Image.open(f'Data/images_original/{genre}/{genre}0000{i}.png'))[:, :, :3]
+                if song_arr.shape != (288, 432, 3):
+                    print(f'OOPSIES: {genre}0000{i}.png shape = {song_arr.shape}, should be (288, 432, 3)')
+                train_set.append(song_arr)
+            else:
+                if genre != 'jazz' or i != 54:
+                    song_arr = np.array(Image.open(f'Data/images_original/{genre}/{genre}000{i}.png'))[:, :, :3]
+                    if song_arr.shape != (288, 432, 3):
+                        print(f'OOPSIES: {genre}0000{i}.png shape = {song_arr.shape}, should be (288, 432, 3)')
+                    train_set.append(song_arr)
+    n_inst = len(train_set)
+    # Generate validation set randomly from other half of non-training data
+    val_set = []
+    for i in range(int(((1 - train_p) / 2) * n_inst)):
+        rand = random.randint(0, len(train_set) - 1)
+        val_set.append(train_set[rand])
+        train_set.pop(rand)
+    # Generate test set randomly from half of non-training data
+    test_set = []
+    for i in range(int(((1 - train_p) / 2) * n_inst)):
+        rand = random.randint(0, len(train_set) - 1)
+        test_set.append(train_set[rand])
+        train_set.pop(rand)
+    return train_set, val_set, test_set
 
+
+if __name__ == '__main__':
+    seed = sys.argv[1]
+    train_p = float(sys.argv[2])
+    train_set, val_set, test_set = process_data()
+    print(len(train_set))
