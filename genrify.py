@@ -10,6 +10,9 @@ import numpy as np
 from scipy.signal import fftconvolve
 
 GENRES = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
+
+NUM_CLASSES = len(GENRES)
+
 IMG_SIZE = (288, 432, 3)
 
 
@@ -119,6 +122,10 @@ def pool(matrix, b_size):
 
 
 def zfnet():
+    """ Creates a ZFNet tensorflow model
+
+    :return: Tensorflow model object representing the ZFNet CNN architecture
+    """
     return tf.keras.models.Sequential([
         tf.keras.layers.Rescaling(1./255),
 
@@ -144,11 +151,15 @@ def zfnet():
 
         tf.keras.layers.Dense(4096),
 
-        tf.keras.layers.Dense(10, activation='softmax')
+        tf.keras.layers.Dense(NUM_CLASSES, activation='softmax')
     ])
 
 
 def cnn():
+    """ Creates a CNN tensorflow model
+
+    :return: Tensorflow model object representing a vanilla CNN architecture
+    """
     return tf.keras.Sequential([
         tf.keras.layers.Rescaling(1./255),
 
@@ -165,7 +176,7 @@ def cnn():
 
         tf.keras.layers.Dense(128, activation='relu'),
 
-        tf.keras.layers.Dense(10)
+        tf.keras.layers.Dense(NUM_CLASSES)
     ])
 
 
@@ -232,9 +243,14 @@ if __name__ == '__main__':
     start_time = time.time()
 
     print("Generating Data Sets...")
-    train_ds, val_ds = tf.keras.utils.image_dataset_from_directory('Data/images_original', validation_split=0.2,
-                                                           subset="both", seed=12345, image_size=IMG_SIZE[:-1],
-                                                           batch_size=32)
+    train_ds, val_ds = tf.keras.utils.image_dataset_from_directory(
+        'Data/images_original', validation_split=0.2,
+        subset="both",
+        seed=12345,
+        image_size=IMG_SIZE[:-1],
+        batch_size=32
+    )
+
     AUTOTUNE = tf.data.AUTOTUNE
     train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
     val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
@@ -242,9 +258,11 @@ if __name__ == '__main__':
 
     model = zfnet()
 
-    model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9),
-                  loss='sparse_categorical_crossentropy',
-                  metrics=['accuracy', tf.keras.metrics.TopKCategoricalAccuracy(5)])
+    model.compile(
+        optimizer=tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9),
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy', tf.keras.metrics.TopKCategoricalAccuracy(5)]
+    )
 
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=1, min_lr=0.00001)
 
