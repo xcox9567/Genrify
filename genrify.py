@@ -160,23 +160,34 @@ def cnn():
 
     :return: Tensorflow model object representing a vanilla CNN architecture
     """
-    return tf.keras.Sequential([
+    return tf.keras.models.Sequential([
         tf.keras.layers.Rescaling(1./255),
 
-        tf.keras.layers.Conv2D(32, 3, activation='relu'),
-        tf.keras.layers.MaxPooling2D(),
+        tf.keras.layers.Conv2D(8, (3, 3), strides=(1, 1), activation='relu', input_shape=IMG_SIZE),
+        tf.keras.layers.BatchNormalization(axis=3),
+        tf.keras.layers.MaxPooling2D(3, strides=2),
 
-        tf.keras.layers.Conv2D(32, 3, activation='relu'),
-        tf.keras.layers.MaxPooling2D(),
+        tf.keras.layers.Conv2D(16, (3, 3), strides=(1, 1), activation='relu'),
+        tf.keras.layers.BatchNormalization(axis=3),
+        tf.keras.layers.MaxPooling2D(3, strides=2),
 
-        tf.keras.layers.Conv2D(32, 3, activation='relu'),
-        tf.keras.layers.MaxPooling2D(),
+        tf.keras.layers.Conv2D(32, (3, 3), strides=(1, 1), activation='relu'),
+        tf.keras.layers.BatchNormalization(axis=3),
+        tf.keras.layers.MaxPooling2D(3, strides=2),
+
+        tf.keras.layers.Conv2D(64, (3, 3), strides=(1, 1), activation='relu'),
+        tf.keras.layers.BatchNormalization(axis=3),
+        tf.keras.layers.MaxPooling2D(3, strides=2),
+
+        tf.keras.layers.Conv2D(128, (3, 3), strides=(1, 1), activation='relu'),
+        tf.keras.layers.BatchNormalization(axis=3),
+        tf.keras.layers.MaxPooling2D(3, strides=2),
 
         tf.keras.layers.Flatten(),
 
-        tf.keras.layers.Dense(128, activation='relu'),
+        tf.keras.layers.Dropout(rate=0.3),
 
-        tf.keras.layers.Dense(NUM_CLASSES)
+        tf.keras.layers.Dense(NUM_CLASSES, activation='softmax')
     ])
 
 
@@ -256,7 +267,7 @@ if __name__ == '__main__':
     val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
     # x_train, y_train, x_test, y_test, x_val, y_val = process_data(float(sys.argv[1]), sys.argv[2])
 
-    model = zfnet()
+    model = cnn()
 
     model.compile(
         optimizer=tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9),
@@ -266,7 +277,7 @@ if __name__ == '__main__':
 
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=1, min_lr=0.00001)
 
-    model.fit(train_ds, batch_size=128, validation_data=val_ds, epochs=90, callbacks=[reduce_lr])
+    model.fit(train_ds, batch_size=128, validation_data=val_ds, epochs=100) #, callbacks=[reduce_lr])
 
     # model.compile(optimizer='adam', loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     #               metrics=['accuracy'])
