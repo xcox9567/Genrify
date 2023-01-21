@@ -49,7 +49,6 @@ def mels_from_dir(directory, save_to):
             fig, ax = plt.subplots()
             plt.imshow(librosa.power_to_db(mels, ref=np.max))
             ax.axis('off')
-            # plt.figure(figsize=(2, 3))
             plt.savefig(f"{save_to}/{filename[:-4]}_{i + 1}.png", bbox_inches='tight')
             plt.close()
     print('')
