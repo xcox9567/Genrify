@@ -1,6 +1,11 @@
 # Authors: Alexander Cox, Ernst-Richard Kausche, Ava Sato
+import os
 import time
+import librosa
+import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
+
 
 GENRES = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
 
@@ -9,13 +14,54 @@ NUM_CLASSES = len(GENRES)
 IMG_SIZE = (288, 432, 3)
 
 
+def split_gtzan(save_to):
+    """ Generates directory of 5 second spectrograms from GTZAN data
+
+    :param save_to: String representing directory to save files to
+    """
+    if not os.path.isdir(save_to):
+        os.makedirs(save_to)
+    for genre in GENRES:
+        if genre != 'blues' and genre != 'classical' and genre != 'country' and genre != 'disco':
+            print(f'Generating {genre} spectrograms...')
+            mels_from_dir(f'GTZAN/genres_original/{genre}', f'{save_to}/{genre}')
+
+
+def mels_from_dir(directory, save_to):
+    """ Generates mel spectrograms from 5 second slices of audio files
+
+    :param directory: String representing path to directory containing audio files
+    :param save_to: String representing directory to save files to
+    """
+    if not os.path.isdir(save_to):
+        os.makedirs(save_to)
+    for filename in os.listdir(directory):
+        print(f'\r\t{filename}', end='')
+        f = os.path.join(directory, filename)
+        try:
+            y, sr = librosa.load(f)
+        except:
+            print(f'Problem with {f}')
+            continue
+        wind = sr * 5
+        for i in range(int(len(y) / wind)):
+            mels = librosa.feature.melspectrogram(y=y[i * wind: (i + 1) * wind], sr=sr)
+            fig, ax = plt.subplots()
+            plt.imshow(librosa.power_to_db(mels, ref=np.max))
+            ax.axis('off')
+            # plt.figure(figsize=(2, 3))
+            plt.savefig(f"{save_to}/{filename[:-4]}_{i + 1}.png", bbox_inches='tight')
+            plt.close()
+    print('')
+
+
 def zfnet():
     """ Creates a ZFNet tensorflow model as a tensorflow Sequential
 
     :return: Tensorflow Sequential object representing the ZFNet CNN architecture
     """
     return tf.keras.models.Sequential([
-        tf.keras.layers.Rescaling(1./255),
+        tf.keras.layers.Rescaling(1. / 255),
 
         tf.keras.layers.Conv2D(96, (7, 7), strides=(2, 2), activation='relu', input_shape=IMG_SIZE),
         tf.keras.layers.MaxPooling2D(3, strides=2),
@@ -49,7 +95,7 @@ def gtzanet():
     :return: Tensorflow sequential object representing the GTZANet CNN architecture
     """
     return tf.keras.models.Sequential([
-        tf.keras.layers.Rescaling(1./255),
+        tf.keras.layers.Rescaling(1. / 255),
 
         tf.keras.layers.Conv2D(8, (3, 3), strides=(1, 1), activation='relu', input_shape=IMG_SIZE),
         tf.keras.layers.MaxPooling2D(3, strides=2),
@@ -78,10 +124,11 @@ if __name__ == '__main__':
     print(f'Process Started at {time.strftime("%H:%M:%S", time.localtime())}')
     start_time = time.time()
 
-    print("Generating Data Sets...")
+    print("Generating data sets...")
     # Generate training set and validation set from images_original directory with 20% saved for validation
     train_ds, val_ds = tf.keras.utils.image_dataset_from_directory(
-        'Data/images_original', validation_split=0.2,
+        'Data',
+        validation_split=0.2,
         subset="both",
         seed=12345,
         image_size=IMG_SIZE[:-1],
